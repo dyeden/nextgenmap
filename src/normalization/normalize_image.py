@@ -38,6 +38,22 @@ def normalize(block, stats, outputNodata):
 	block[block == stats['nodata']] = outputNodata
 	return block
 
+
+def reclass_values(data, labels_origin, labels_target):
+
+	if len(labels_origin) != len(labels_target):
+		raise Exception(
+		'reclass_values: "labels_origin" and "labels_target" must have the same length')
+
+	def reclass(a):
+		b = np.copy(a)
+		for l_ori, l_tar in zip(labels_origin, labels_target):
+			b = np.where(a == l_ori, l_tar, b)
+		return b
+
+	return np.apply_along_axis(reclass,  0, data)
+
+
 def filter(info, inputs, outputs, otherargs):
 	
 	print("Processing status " + str(info.getPercent()) + "%")
@@ -48,11 +64,13 @@ def filter(info, inputs, outputs, otherargs):
 	norm_nir = normalize(inputs.image[3:4,:,:].astype('Float32'), otherargs.nir_stats, otherargs.output_nodata)
 
 	labels = inputs.labels.astype('Float32')
-	labels[labels == 0] = -2
-	labels[labels == 3] = 1
-	labels[labels == 12] = 2
-	labels[labels == 25] = 3
-	labels[labels == 26] = 4
+
+	labels = reclass_values(labels, [0,3,12,25,26], [-2,1,2,3,4])
+	# labels[labels == 0] = -2
+	# labels[labels == 3] = 1
+	# labels[labels == 12] = 2
+	# labels[labels == 25] = 3
+	# labels[labels == 26] = 4
 	
 	outputs.normalized_stacked = np.concatenate((norm_blue, norm_green, norm_red, norm_nir, labels))
 
